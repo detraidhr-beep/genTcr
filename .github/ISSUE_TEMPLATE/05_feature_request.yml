@@ -33,4 +33,3 @@ body:
       description: A brief description of the feature
     validations:
       required: true
-

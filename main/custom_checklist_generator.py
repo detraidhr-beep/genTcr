@@ -122,6 +122,25 @@ def load_github_issue_config():
     return json.loads(config_path.read_text())
 
 
+def load_issue_templates():
+    script_dir = Path(__file__).resolve().parent
+    candidates = [
+        script_dir.parent / ".github" / "ISSUE_TEMPLATE",
+        script_dir.parent / "issue_template",
+        script_dir / "issue_template",
+    ]
+    for folder in candidates:
+        if not folder.exists():
+            continue
+        templates = []
+        templates.extend(folder.glob("*.yml"))
+        templates.extend(folder.glob("*.yaml"))
+        templates = [t for t in templates if t.name != "config.yml"]
+        if templates:
+            return sorted({t.name for t in templates})
+    return []
+
+
 def render_markdown(title, description_md, cases):
     lines = [f"# {title}", ""]
     if description_md:
@@ -171,6 +190,7 @@ def render_html(title, description_md, cases, metadata, run_id, run_name, repo_n
         issue_repo = f"https://github.com/{repo_name}"
     issue_repo = html.escape(issue_repo)
     issue_title_prefix = html.escape(issue_config.get("title_prefix", "Bug"))
+    issue_templates = load_issue_templates()
     env_placeholders = {
         "platform": "Which platform are you testing on?",
         "os_version": "Which OS version are you testing on?",
@@ -269,7 +289,7 @@ def render_html(title, description_md, cases, metadata, run_id, run_name, repo_n
         "    .issue-modal.open { display: flex; }",
         "    .issue-card { width: min(760px, 92vw); background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }",
         "    .issue-card label { display: block; font-size: 0.85em; margin-bottom: 4px; color: #6b7280; }",
-        "    .issue-card input, .issue-card textarea { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #e5e7eb; }",
+        "    .issue-card input, .issue-card textarea, .issue-card select { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #e5e7eb; }",
         "    .issue-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }",
         "    @media (prefers-color-scheme: dark) {",
         "      body { background: #0b0f14; color: #e5e7eb; }",
@@ -295,7 +315,7 @@ def render_html(title, description_md, cases, metadata, run_id, run_name, repo_n
         "      .bug-link { background: #2a1a12; color: #fbbf24; border-color: #1f2937; }",
         "      .issue-btn { background: #1e1b4b; color: #c7d2fe; border-color: #1f2937; }",
         "      .issue-card { background: #111827; color: #e5e7eb; }",
-        "      .issue-card input, .issue-card textarea { background: #0f172a; color: #e5e7eb; border-color: #1f2937; }",
+        "      .issue-card input, .issue-card textarea, .issue-card select { background: #0f172a; color: #e5e7eb; border-color: #1f2937; }",
         "    }",
         "  </style>",
         "</head>",
@@ -518,6 +538,20 @@ def render_html(title, description_md, cases, metadata, run_id, run_name, repo_n
             f"      <input id=\"issue-repo\" type=\"text\" value=\"{issue_repo}\" />",
             "      <label>Title</label>",
             f"      <input id=\"issue-title\" type=\"text\" value=\"{issue_title_prefix}: \" />",
+        ]
+    )
+    if issue_templates:
+        lines.append("      <label>Template</label>")
+        lines.append("      <select id=\"issue-template\">")
+        lines.append("        <option value=\"\">Default</option>")
+        for template in issue_templates:
+            escaped_template = html.escape(template)
+            lines.append(
+                f"        <option value=\"{escaped_template}\">{escaped_template}</option>"
+            )
+        lines.append("      </select>")
+    lines.extend(
+        [
             "      <label>Body</label>",
             "      <textarea id=\"issue-body\" rows=\"10\"></textarea>",
             "      <div class=\"issue-actions\">",
@@ -986,6 +1020,7 @@ def render_html(title, description_md, cases, metadata, run_id, run_name, repo_n
             "        this.modal = document.getElementById('issue-modal');",
             "        this.repoInput = document.getElementById('issue-repo');",
             "        this.titleInput = document.getElementById('issue-title');",
+            "        this.templateSelect = document.getElementById('issue-template');",
             "        this.bodyInput = document.getElementById('issue-body');",
             "        this.openBtn = document.getElementById('issue-open');",
             "        this.closeBtn = document.getElementById('issue-close');",
@@ -1017,8 +1052,104 @@ def render_html(title, description_md, cases, metadata, run_id, run_name, repo_n
             "        if (!repo) return;",
             "        const title = this.titleInput.value || 'Bug report';",
             "        const body = this.bodyInput.value || '';",
-            "        const url = `${repo}/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`;",
+            "        const template = this.templateSelect ? this.templateSelect.value : '';",
+            "        const fields = this.buildTemplateFields(template, this.currentCard);",
+            "        const params = new URLSearchParams();",
+            "        params.set('title', title);",
+            "        if (body) params.set('body', body);",
+            "        if (template) params.set('template', template);",
+            "        Object.entries(fields).forEach(([key, value]) => {",
+            "          if (!value) return;",
+            "          if (Array.isArray(value)) {",
+            "            value.forEach((entry) => {",
+            "              if (!entry) return;",
+            "              params.append(`${key}[]`, entry);",
+            "              params.append(key, entry);",
+            "            });",
+            "            return;",
+            "          }",
+            "          params.append(key, value);",
+            "        });",
+            "        const url = `${repo}/issues/new?${params.toString()}`;",
             "        window.open(url, '_blank');",
+            "      }",
+            "      buildTemplateFields(template, card) {",
+            "        if (!card) return {};",
+            "        const title = card.getAttribute('data-case-title') || 'Bug report';",
+            "        const status = card.querySelector('.case-status')?.value || 'not_set';",
+            "        const steps = Array.from(card.querySelectorAll('ol li')).map((li) => li.textContent.trim());",
+            "        const notes = card.querySelector('.case-notes')?.value || '';",
+            "        const actual = card.querySelector('.case-actual')?.value || '';",
+            "        const bugLink = card.querySelector('.bug-link-input')?.value || '';",
+            "        const attachments = Array.from(card.querySelectorAll('.case-proof img')).map((img, idx) => {",
+            "          const name = img.dataset.name || `screenshot-${idx + 1}`;",
+            "          return `- ${name}`;",
+            "        }).join('\\n');",
+            "        const expectedMeta = Array.from(card.querySelectorAll('.meta')).find((el) => el.textContent.trim().startsWith('Expected:'));",
+            "        const expected = expectedMeta ? expectedMeta.textContent.replace(/^Expected:\\s*/i, '') : '';",
+            "        const env = buildReport().environment;",
+            "        const qa = (document.getElementById('collector')?.value || '').trim();",
+            "        const envText = [",
+            "          env.platform ? `Platform: ${env.platform}` : '',",
+            "          env.os_version ? `OS version: ${env.os_version}` : '',",
+            "          env.app_version ? `App version: ${env.app_version}` : '',",
+            "          env.revision ? `Revision: ${env.revision}` : '',",
+            "          (env.channels || []).length ? `Channel: ${(env.channels || []).join(', ')}` : ''",
+            "        ].filter(Boolean).join('\\n');",
+            "        const description = [",
+            "          `Case: ${title}` ,",
+            "          `Status: ${status}` ,",
+            "          qa ? `QA: ${qa}` : '',",
+            "          notes ? `Notes: ${notes}` : ''",
+            "        ].filter(Boolean).join('\\n');",
+            "        const actualWithAttachments = [",
+            "          actual,",
+            "          attachments ? `\\n\\nAttachments (upload files manually):\\n${attachments}` : ''",
+            "        ].filter(Boolean).join('');",
+            "        const baseFields = {",
+            "          description,",
+            "          str: steps.length ? steps.map((s, i) => `${i + 1}. ${s}`).join('\\n') : '',",
+            "          result: actualWithAttachments,",
+            "          expectation: expected,",
+            "          version: envText,",
+            "          channels: env.channels || [],",
+            "          reproducibility: '',",
+            "          misc: [",
+            "            bugLink ? `Bug: ${bugLink}` : '',",
+            "            attachments ? `Attachments:\\n${attachments}` : ''",
+            "          ].filter(Boolean).join('\\n\\n')",
+            "        };",
+            "        const templateName = (template || '').toLowerCase();",
+            "        if (templateName.includes('feature')) {",
+            "          return {",
+            "            platforms: env.platform || '',",
+            "            description: description || notes || ''",
+            "          };",
+            "        }",
+            "        if (templateName.includes('chromium_bump')) {",
+            "          return {",
+            "            bump: '',",
+            "            qa: '',",
+            "            checks: ''",
+            "          };",
+            "        }",
+            "        if (templateName.includes('code_health')) {",
+            "          return { description: description || notes || '' };",
+            "        }",
+            "        if (templateName.includes('ios')) {",
+            "          return {",
+            "            ...baseFields,",
+            "            device: [env.platform, env.os_version].filter(Boolean).join(' '),",
+            "            affected: ''",
+            "          };",
+            "        }",
+            "        if (templateName.includes('android')) {",
+            "          return {",
+            "            ...baseFields,",
+            "            device: [env.platform, env.os_version].filter(Boolean).join(' ')",
+            "          };",
+            "        }",
+            "        return baseFields;",
             "      }",
             "      buildIssue(card) {",
             "        const title = card.getAttribute('data-case-title') || 'Bug report';",

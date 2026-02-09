@@ -1,0 +1,13 @@
+{
+  "platform_options": ["Desktop", "Mobile", "Android", "iOS"],
+  "channel_options": ["release (stable)", "beta", "nightly"],
+  "os_options": [
+    "macOS 26.1",
+    "Windows 11",
+    "Windows 10",
+    "Ubuntu 22.04",
+    "Debian 13",
+    "Android 13",
+    "iOS 26"
+  ]
+}

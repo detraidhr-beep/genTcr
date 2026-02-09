@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ $# -lt 1 ]]; then
+  read -r -p "Enter checklist name: " NAME
+else
+  NAME="$1"
+  shift || true
+fi
+
+if [[ -z "${NAME:-}" ]]; then
+  echo "Name is required."
+  exit 1
+fi
+
+BASEDIR="$(cd "$(dirname "$0")" && pwd)"
+BASENAME="${NAME%.json}"
+TARGET="$BASEDIR/custom_checklists/${BASENAME}.json"
+TEMPLATE="$BASEDIR/custom_checklists/template.json"
+
+if [[ ! -f "$TEMPLATE" ]]; then
+  echo "Template not found: $TEMPLATE"
+  exit 1
+fi
+
+if [[ -f "$TARGET" ]]; then
+  echo "File already exists: $TARGET"
+  exit 1
+fi
+
+python3 - "$TARGET" "$BASENAME" "$BASEDIR" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+target = Path(sys.argv[1])
+name = sys.argv[2]
+base = Path(sys.argv[3])
+template = base / "custom_checklists/template.json"
+
+data = json.loads(template.read_text())
+data["title"] = name
+data["issue_title"] = f"{name} - Verify the build"
+
+target.write_text(json.dumps(data, indent=2) + "\n")
+print(f"Created {target}")
+PY

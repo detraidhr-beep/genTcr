@@ -153,7 +153,7 @@ def render_markdown(title, description_md, cases):
     return "\n".join(lines).rstrip() + "\n"
 
 
-def render_html(title, description_md, cases, metadata, run_id, run_name):
+def render_html(title, description_md, cases, metadata, run_id, run_name, repo_name=None):
     escaped_title = html.escape(title)
     collector_placeholder = "QA Engineer"
     raw_collector = str(metadata.get("collector") or "")
@@ -164,6 +164,11 @@ def render_html(title, description_md, cases, metadata, run_id, run_name):
     env = metadata.get("environment") or {}
     issue_config = load_github_issue_config()
     issue_repo = html.escape(issue_config.get("repo_url", ""))
+    if issue_repo == "https://github.com/ORG/REPO":
+        issue_repo = ""
+    if not issue_repo and repo_name:
+        issue_repo = f"https://github.com/{repo_name}"
+    issue_repo = html.escape(issue_repo)
     issue_title_prefix = html.escape(issue_config.get("title_prefix", "Bug"))
     env_placeholders = {
         "platform": "Which platform are you testing on?",
@@ -1362,7 +1367,13 @@ def main():
     run_name = args.run_name or data.get("run_name") or data["title"]
     markdown_body = render_markdown(data["title"], description_md, data["cases"])
     html_body = render_html(
-        data["title"], description_md, data["cases"], metadata, run_id, run_name
+        data["title"],
+        description_md,
+        data["cases"],
+        metadata,
+        run_id,
+        run_name,
+        repo_name,
     )
 
     output_path = resolve_output_path(

@@ -18,4 +18,3 @@ body:
       description: A brief description of the issue
     validations:
       required: true
-

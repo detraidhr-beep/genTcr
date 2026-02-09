@@ -4,6 +4,7 @@ import html
 import json
 import re
 import webbrowser
+import uuid
 from datetime import datetime
 from pathlib import Path
 
@@ -184,10 +185,11 @@ def render_html(title, description_md, cases, metadata, run_id, run_name, repo_n
             return "", placeholder
         return raw, placeholder
     templates = metadata.get("environment_templates") or []
+    base_id = run_id.split("Z")[0].replace("T", "-")
     base_file_name = (
         f"{slugify(run_name)}-"
         f"{slugify(env.get('app_version') or 'unknown')}-"
-        f"{run_id[:13].replace('T', '-')}"
+        f"{base_id}"
     )
     lines = [
         "<!doctype html>",
@@ -1301,10 +1303,11 @@ def resolve_output_path(data, input_path, output_dir, run_id, environment, run_n
         output_dir = (script_dir / output_dir).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     app_version = environment.get("app_version") or "unknown"
+    base_id = run_id.split("Z")[0].replace("T", "-")
     base_name = (
         f"{slugify(run_name)}-"
         f"{slugify(app_version)}-"
-        f"{run_id[:13].replace('T', '-')}"
+        f"{base_id}"
     )
     candidate = output_dir / f"{base_name}.html"
     if not candidate.exists():
@@ -1377,7 +1380,12 @@ def main():
     if milestone_title and not milestone:
         print(f"Warning: milestone not found: {milestone_title}")
 
-    run_id = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+    now = datetime.utcnow()
+    run_id = (
+        f"{now.strftime('%Y%m%dT%H%M%S')}"
+        f"{now.microsecond // 1000:03d}Z-"
+        f"{uuid.uuid4().hex[:4]}"
+    )
     environment = normalize_environment(data)
     metadata = {
         "collector": args.collector or data.get("collector", ""),

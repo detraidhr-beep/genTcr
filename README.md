@@ -53,7 +53,13 @@ pip install PyGithub
 
 ### 1) Configure GitHub token
 
-Create `github.secret` in project root or `main/`:
+Preferred: set `GITHUB_TOKEN` environment variable.
+
+```bash
+export GITHUB_TOKEN="ghp_xxxxxxxxxxxx"
+```
+
+Alternative: create `github.secret` in project root or `main/`:
 
 ```bash
 echo "ghp_xxxxxxxxxxxx" > github.secret
@@ -68,6 +74,8 @@ Token file is ignored by Git via `.gitignore`.
 cd main
 ./run_checklist.sh
 ```
+
+`--test` is offline-safe: it skips GitHub API calls (no token/repo validation).
 
 Or run with an explicit file:
 
@@ -200,7 +208,7 @@ Field notes:
 | `--collector` | Override collector name |
 | `--run-name` | Name used for output file generation |
 | `--open` / `--no-open` | Open generated HTML in browser (default: open) |
-| `--test [true/false]` | Test mode; prints issue preview and skips issue creation |
+| `--test [true/false]` | Test mode; offline-safe preview (no issue creation, no GitHub API calls) |
 
 Example:
 
@@ -232,8 +240,8 @@ Files in `main/configs/`:
 
 ## Troubleshooting
 
-- `github.secret not found`
-  - Ensure file exists in project root or `main/`.
+- `GitHub token not found`
+  - Set `GITHUB_TOKEN`, or create `github.secret` in project root or `main/`.
 - `Missing repo. Provide --repo or repo in JSON`
   - Add `repo` to checklist JSON or pass `--repo`.
 - `Milestone not found`

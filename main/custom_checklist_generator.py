@@ -2,6 +2,7 @@
 import argparse
 import html
 import json
+import os
 import re
 import webbrowser
 import uuid
@@ -25,13 +26,27 @@ def slugify(text):
 
 
 def read_token():
+    env_token = os.getenv("GITHUB_TOKEN", "").strip()
+    if env_token:
+        return env_token
+
     script_dir = Path(__file__).resolve().parent
-    token_path = script_dir / "github.secret"
-    if not token_path.exists():
-        token_path = Path.cwd() / "github.secret"
-    if not token_path.exists():
-        raise FileNotFoundError("github.secret not found")
-    return token_path.read_text().strip()
+    token_paths = [
+        script_dir / "github.secret",
+        Path.cwd() / "github.secret",
+    ]
+    for token_path in token_paths:
+        if not token_path.exists():
+            continue
+        token = token_path.read_text().strip()
+        if token:
+            return token
+        raise ValueError(f"Token file is empty: {token_path}")
+
+    raise FileNotFoundError(
+        "GitHub token not found. Set GITHUB_TOKEN or create github.secret in "
+        "project root or main/."
+    )
 
 
 def resolve_path(base_dir, maybe_path):
@@ -1574,20 +1589,25 @@ def main():
     data, description_md = load_input(input_path)
 
     repo_name = args.repo or data.get("repo")
-    if not repo_name:
-        raise ValueError("Missing repo. Provide --repo or repo in JSON.")
-
-    token = read_token()
-    if not token:
-        raise ValueError("github.secret is empty")
-
-    github = Github(token, timeout=1000)
-    repo = github.get_repo(repo_name)
-
     milestone_title = args.milestone or data.get("milestone")
-    milestone = get_milestone(repo, milestone_title)
-    if milestone_title and not milestone:
-        print(f"Warning: milestone not found: {milestone_title}")
+    milestone = None
+    repo = None
+
+    # In test mode we avoid GitHub API calls so the script can run offline.
+    if args.test:
+        if milestone_title:
+            print(
+                "Note: milestone validation is skipped in test mode (offline-safe)."
+            )
+    else:
+        if not repo_name:
+            raise ValueError("Missing repo. Provide --repo or repo in JSON.")
+        token = read_token()
+        github = Github(token, timeout=1000)
+        repo = github.get_repo(repo_name)
+        milestone = get_milestone(repo, milestone_title)
+        if milestone_title and not milestone:
+            print(f"Warning: milestone not found: {milestone_title}")
 
     now = datetime.utcnow()
     run_id = (
@@ -1627,9 +1647,9 @@ def main():
     if args.test:
         print("\n--- Test mode ---")
         print(f"Issue title: {issue_title}")
-        print(f"Repo: {repo_name}")
-        if milestone:
-            print(f"Milestone: {milestone.title}")
+        print(f"Repo: {repo_name or '<not set>'}")
+        if milestone_title:
+            print(f"Milestone: {milestone_title}")
         if labels:
             print(f"Labels: {', '.join(labels)}")
         print("\nIssue body preview:\n")

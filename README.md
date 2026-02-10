@@ -6,9 +6,10 @@ A generator for custom QA checklists: from a JSON description it produces an int
 
 ## What it does
 
-1. **Reads a checklist** — a JSON file with test cases (steps, expected result, tags).
-2. **Generates an HTML report** — a browser page where QA marks status (Pass/Fail/Blocked/Skipped), adds notes, screenshots, and bug links.
-3. **Creates a GitHub issue** — an issue is created in the specified repository with a markdown checklist (unless test mode is enabled).
+- [x] **Reads a checklist** — a JSON file with test cases (steps, expected result, tags).
+- [x] **Generates an HTML report** — a browser page where QA marks status (Pass/Fail/Blocked/Skipped), adds notes, screenshots, and bug links.
+- [x] **Creates a GitHub issue** — an issue is created in the specified repository with a markdown checklist (unless test mode is enabled).
+- [ ] **Tools for AI Agents (Leo, Atlas, Comet)** — simple and fast bug reporting, testing, etc.
 
 Useful for smoke checks, regressions, and any repeatable test scenarios.
 

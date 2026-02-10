@@ -8,7 +8,11 @@ A generator for custom QA checklists: from a JSON description it produces an int
 
 - [x] **Reads a checklist** — a JSON file with test cases (steps, expected result, tags).
 - [x] **Generates an HTML report** — a browser page where QA marks status (Pass/Fail/Blocked/Skipped), adds notes, screenshots, and bug links.
-- [x] **Creates a GitHub issue** — an issue is created in the specified repository with a markdown checklist (unless test mode is enabled).
+- [x] **Parses data from `brave://version`** — auto-fills app version, OS, revision, and channel fields.
+- [x] **Creates GitHub issues from checklist data** — opens a pre-filled issue flow for fast transfer of problem details into GitHub issues.
+- [x] **Activity log** — tracks important actions during checklist execution.
+- [x] **Status summary dashboard** — visual summary of Pass/Fail/Blocked/Skipped/Not set.
+- [x] **Machine-readable QA report data** — exports structured report JSON for easier and clearer AI agent workflows.
 - [ ] **Tools for AI Agents (Leo, Atlas, Comet)** — simple and fast bug reporting, testing, etc.
 
 Useful for smoke checks, regressions, and any repeatable test scenarios.

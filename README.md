@@ -16,6 +16,8 @@ Custom QA checklist runner that turns JSON test plans into interactive HTML repo
 - [x] Show a status summary dashboard (Pass/Fail/Blocked/Skipped/Not set).
 - [x] Export machine-readable QA report data (JSON) for downstream tooling and AI-agent workflows.
 - [ ] Add dedicated AI-agent tools (Leo, Atlas, Comet) for even faster issue triage and reporting.
+<img width="2834" height="1001" alt="image" src="https://github.com/user-attachments/assets/035571f0-f8ee-46bb-b701-a7c4580fd881" />
+<img width="2823" height="1314" alt="image" src="https://github.com/user-attachments/assets/1929cf4f-3e23-43e0-afd4-95b8e58d3985" />
 
 ---
 
